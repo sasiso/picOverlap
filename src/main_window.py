@@ -1,23 +1,30 @@
-# main_window.py
 from PyQt5.QtWidgets import QMainWindow, QHBoxLayout, QWidget, QAction, QMenuBar, QLabel, QSlider
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QIcon
+from PyQt5 import QtWidgets, QtGui, QtCore
 import cv2
+import numpy as np
 from image_display_widget import ImageDisplayWidget
 from image_list_widget import ImageListWidget
+
+  
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Image Editor")
         
-        self.image_display_widget = ImageDisplayWidget()
+        self.image_display_widget = ImageDisplayWidget(main_window=self)
         self.image_list_widget = ImageListWidget()
         self.selected_images = []
 
         self.init_ui()
 
-    def init_ui(self):
+        self.offset = QPoint(0, 0)
+        self.dragging = False
+        self.last_pos = QPoint()
+
+    def init_ui(self):        
         self.create_menu()
 
         main_widget = QWidget()
@@ -39,6 +46,11 @@ class MainWindow(QMainWindow):
         self.image_list_widget.imagesAdded.connect(self.update_image_display)
         self.weight_slider.valueChanged.connect(self.update_image_display)
 
+        # Install event filter to handle mouse events
+        self.installEventFilter(self)
+
+
+
     def update_image_display(self):
         self.selected_images.clear()
         for item in range(self.image_list_widget.count()):
@@ -58,7 +70,16 @@ class MainWindow(QMainWindow):
                 combined_image = cv2.addWeighted(combined_image, 1 - weight, image, weight, 0)
 
         if combined_image is not None:
-            self.image_display_widget.set_image(combined_image)
+            # Apply offset for panning
+            offset_image = self.apply_offset(combined_image)
+            self.image_display_widget.set_image(offset_image)
+
+    def apply_offset(self, image):
+        # Create an affine transformation matrix to apply the offset
+        transform_matrix = np.float32([[1, 0, self.offset.x()], [0, 1, self.offset.y()]])
+        offset_image = cv2.warpAffine(image, transform_matrix, (image.shape[1], image.shape[0]))
+        return offset_image
+
 
     def create_menu(self):
             menubar = self.menuBar()
