@@ -44,42 +44,52 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
 
         self.image_list_widget.imagesAdded.connect(self.update_image_display)
-        self.weight_slider.valueChanged.connect(self.update_image_display)
+        self.weight_slider.valueChanged.connect(self.slider_changed)
 
         # Install event filter to handle mouse events
         self.installEventFilter(self)
 
+        
+    def slider_changed(self):
+        weight = self.weight_slider.value() / 100.0  # Normalize the slider value to a float between 0 and 1
+        selected_item = self.image_list_widget.currentItem().text()
+        self.image_list_widget._data[selected_item].change_transparency(weight)
+        self.display_images()
 
 
     def update_image_display(self):
         self.selected_images.clear()
         for item in range(self.image_list_widget.count()):
             self.selected_images.append(self.image_list_widget.item(item).text())
+        
 
         self.display_images()
 
     def display_images(self):
-        combined_image = None
-        weight = self.weight_slider.value() / 100.0  # Normalize the slider value to a float between 0 and 1
-        for image_path in self.selected_images:
-            image = cv2.imread(image_path)
+        combined_image = None    
+        item = self.image_list_widget.currentItem()
+        selected_item = None
+        if item:
+            selected_item = self.image_list_widget.currentItem().text() 
+            combined_image =    self.image_list_widget._data[selected_item].modified_data
+        for fp, reader in self.image_list_widget._data.items():
+            if fp == selected_item:
+                continue 
+            image = reader.modified_data
             if combined_image is None:
                 combined_image = image
             else:
                 image = cv2.resize(image, (combined_image.shape[1], combined_image.shape[0]))
-                combined_image = cv2.addWeighted(combined_image, 1 - weight, image, weight, 0)
+                combined_image = cv2.addWeighted(combined_image,reader.weight, image,reader.weight, 0) 
 
-        if combined_image is not None:
-            # Apply offset for panning
-            offset_image = self.apply_offset(combined_image)
-            self.image_display_widget.set_image(offset_image)
+
+        self.image_display_widget.set_image(combined_image)
 
     def apply_offset(self, image):
-        # Create an affine transformation matrix to apply the offset
-        transform_matrix = np.float32([[1, 0, self.offset.x()], [0, 1, self.offset.y()]])
-        offset_image = cv2.warpAffine(image, transform_matrix, (image.shape[1], image.shape[0]))
-        return offset_image
-
+         for reader in self.image_list_widget._data:            
+            for reader.file_path in self.selected_images:
+                reader.apply_shift(self.offset.x(), self.offset.y())
+        
 
     def create_menu(self):
             menubar = self.menuBar()
