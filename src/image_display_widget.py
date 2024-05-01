@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QPixmap, QPainter, QImage, QColor
 from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtCore import Qt, QPoint, QRectF  # Import QRectF
 
 class ImageDisplayWidget(QWidget):
     def __init__(self, main_window):
@@ -24,15 +25,36 @@ class ImageDisplayWidget(QWidget):
     def paintEvent(self, event):
         if hasattr(self, 'image'):
             painter = QPainter(self)
-            # Assuming self.image is a numpy.ndarray representing an image
-            # Convert the numpy image to a QImage
-            height, width, channel = self.image.shape
-            bytesPerLine = channel * width
-            qImg = QImage(self.image.data, width, height, bytesPerLine, QImage.Format_RGB888)
+            image = QImage(self.image.data, self.image.shape[1], self.image.shape[0], self.image.strides[0], QImage.Format_RGB888)
+            
+            widget_rect = self.rect()
+            image_rect = QRectF(image.rect())
+
+            # Calculate aspect ratios
+            aspect_ratio_widget = widget_rect.width() / widget_rect.height()
+            aspect_ratio_image = image_rect.width() / image_rect.height()
+
+            # Scale image to fit widget preserving aspect ratio
+            if aspect_ratio_widget > aspect_ratio_image:
+                # Fit image horizontally
+                scaled_width = widget_rect.height() * aspect_ratio_image
+                image_rect.setWidth(scaled_width)
+                image_rect.setHeight(widget_rect.height())
+            else:
+                # Fit image vertically
+                scaled_height = widget_rect.width() / aspect_ratio_image
+                image_rect.setHeight(scaled_height)
+                image_rect.setWidth(widget_rect.width())
+
+            # Center image in widget
+            image_rect.moveCenter(widget_rect.center())
 
             # Fill the area around the image with white color
-            painter.fillRect(self.rect(), QColor('white'))
-            painter.drawImage(self.rect(),qImg)
+            painter.fillRect(widget_rect, QColor('white'))
+
+            # Draw image
+            painter.drawImage(image_rect, image)
+
 
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton:
