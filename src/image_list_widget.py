@@ -54,12 +54,13 @@ class ImageReader:
         self.modified_data = np.copy(self.original_data)
 
     def change_transparency(self, alpha):
-        self.weight = alpha
-        if self.original_data is None:
-            print("Image data not available. Please read the image first.")
-            return
-        self.modified_data = cv2.addWeighted(self.original_data, alpha, self.modified_data, 1 - alpha, 0)
 
+        # Create a transparent background image
+        background = np.zeros_like(self.original_data)
+
+        # Blend the image and background with transparency
+        self.modified_data = cv2.addWeighted(self.original_data, alpha, background, 1 - alpha, 0)
+    
 
 class ImageListWidget(QListWidget):
     imagesAdded = pyqtSignal()

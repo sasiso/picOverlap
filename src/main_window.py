@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
                 combined_image = image
             else:
                 image = cv2.resize(image, (combined_image.shape[1], combined_image.shape[0]))
-                combined_image = cv2.addWeighted(combined_image,reader.weight, image,reader.weight, 0) 
+                combined_image = cv2.addWeighted(combined_image,0.5, image,0.5, 0) 
 
 
         self.image_display_widget.set_image(combined_image)
