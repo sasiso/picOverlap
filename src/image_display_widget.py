@@ -4,13 +4,12 @@ from PyQt5.QtGui import QPixmap, QPainter, QImage, QColor
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtCore import Qt, QPoint, QRectF  # Import QRectF
 
+
 class ImageDisplayWidget(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
         self.init_ui()
-
-
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -23,10 +22,16 @@ class ImageDisplayWidget(QWidget):
         self.repaint()
 
     def paintEvent(self, event):
-        if hasattr(self, 'image'):
+        if hasattr(self, "image"):
             painter = QPainter(self)
-            image = QImage(self.image.data, self.image.shape[1], self.image.shape[0], self.image.strides[0], QImage.Format_RGB888)
-            
+            image = QImage(
+                self.image.data,
+                self.image.shape[1],
+                self.image.shape[0],
+                self.image.strides[0],
+                QImage.Format_RGB888,
+            )
+
             widget_rect = self.rect()
             image_rect = QRectF(image.rect())
 
@@ -50,11 +55,10 @@ class ImageDisplayWidget(QWidget):
             image_rect.moveCenter(widget_rect.center())
 
             # Fill the area around the image with white color
-            painter.fillRect(widget_rect, QColor('white'))
+            painter.fillRect(widget_rect, QColor("white"))
 
             # Draw image
             painter.drawImage(image_rect, image)
-
 
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton:

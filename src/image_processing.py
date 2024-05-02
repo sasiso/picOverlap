@@ -8,7 +8,27 @@ class ImageReader:
         self.original_data = None
         self.modified_data = None
         self.zoom_factor = 100
+        self.rotation = 0
+        self.weight = 100
+        self.dx = 0
+        self.dy = 0
         self.read_image()
+
+    def move_up(self):
+        self.dy -= 1
+        self.apply_shift()
+
+    def move_down(self):
+        self.dy += 1
+        self.apply_shift()
+
+    def move_left(self):
+        self.dx -= 1
+        self.apply_shift()
+
+    def move_right(self):
+        self.dx += 10
+        self.apply_shift()
 
     def read_image(self):
         try:
@@ -66,18 +86,19 @@ class ImageReader:
             zoomed_image, (width, height), interpolation=cv2.INTER_LINEAR
         )
 
-    def apply_rotation(self, angle):
+    def apply_rotation(self, angle=None, re_apply_all=False):
         # Get the original image
-        self.angle = angle
-        original_image = self.original_data
-        height, width = original_image.shape[:2]
+        self.angle = angle or self.rotation
+        height, width = self.modified_data.shape[:2]
 
         # Calculate the rotation center
         center = (width // 2, height // 2)
 
         # Perform the rotation
         rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
-        rotated_image = cv2.warpAffine(original_image, rotation_matrix, (width, height))
+        rotated_image = cv2.warpAffine(
+            self.modified_data, rotation_matrix, (width, height)
+        )
 
         # Add padding to restore original width and height
         max_dim = max(width, height)
@@ -96,17 +117,35 @@ class ImageReader:
         # Set the padded image to the image reader
         self.modified_data = padded_image
 
-    def apply_shift(self, dx, dy):
-        if self.original_data is None:
-            print("Image data not available. Please read the image first.")
-            return
-        rows, cols, _ = self.modified_data.shape
-        translation_matrix = np.float32([[1, 0, dx], [0, 1, dy]])
+    def apply_shift(self):
+
+        rows, cols, _ = self.original_data.shape
+        translation_matrix = np.float32([[1, 0, self.dx], [0, 1, self.dy]])
         self.modified_data = cv2.warpAffine(
-            self.modified_data, translation_matrix, (cols, rows)
+            self.original_data, translation_matrix, (cols, rows)
         )
 
+        # Create a blank canvas with the same dimensions as the original image
+        canvas = np.ones_like(self.original_data) * 255  # Fill with white pixels
+
+        # Compute the offset to center the moved image on the canvas
+        canvas_rows, canvas_cols, _ = canvas.shape
+        offset_x = (canvas_cols - cols) // 2
+        offset_y = (canvas_rows - rows) // 2
+
+        # Paste the moved image onto the canvas
+        canvas[offset_y : offset_y + rows, offset_x : offset_x + cols] = (
+            self.modified_data
+        )
+
+        self.modified_data = canvas
+        self.apply_rotation()
+
     def reset_to_original(self):
+        self.rotation = 0
+        self.zoom_factor = 0
+        self.dx = 0
+        self.dy = 0
         if self.original_data is None:
             print("Image data not available. Please read the image first.")
             return
