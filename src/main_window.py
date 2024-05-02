@@ -33,9 +33,9 @@ class MainWindow(QMainWindow):
 
         # Add slider
         self.weight_slider = QSlider(Qt.Horizontal)
-        self.weight_slider.setMinimum(0)
-        self.weight_slider.setMaximum(100)
-        self.weight_slider.setValue(50)  # Initial value
+        self.weight_slider.setMinimum(-100)
+        self.weight_slider.setMaximum(200)
+        self.weight_slider.setValue(100)  # Initial value
         layout.addWidget(QLabel("Adjust Weight:"))
         layout.addWidget(self.weight_slider)
 
@@ -49,8 +49,8 @@ class MainWindow(QMainWindow):
 
         # Add slider for zoom
         self.zoom_slider = QSlider(Qt.Horizontal)
-        self.zoom_slider.setMinimum(0)
-        self.zoom_slider.setMaximum(500)  # Adjust maximum zoom level as needed
+        self.zoom_slider.setMinimum(-100)
+        self.zoom_slider.setMaximum(200)  # Adjust maximum zoom level as needed
         self.zoom_slider.setValue(100)  # Initial value (100%)
         layout.addWidget(QLabel("Zoom:"))
         layout.addWidget(self.zoom_slider)
