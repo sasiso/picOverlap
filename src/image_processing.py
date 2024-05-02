@@ -7,28 +7,37 @@ class ImageReader:
         self.file_path = file_path
         self.original_data = None
         self.modified_data = None
-        self.zoom_factor = 100
+        self.zoom_factor = 0
         self.rotation = 0
-        self.weight = 100
+        self.weight = 1
         self.dx = 0
         self.dy = 0
+        self.changed = False
         self.read_image()
 
     def move_up(self):
-        self.dy -= 1
-        self.apply_shift()
+        self.dy -= 10
+        self.changed = True
 
     def move_down(self):
-        self.dy += 1
-        self.apply_shift()
+        self.dy += 10
+        self.changed = True
 
     def move_left(self):
-        self.dx -= 1
-        self.apply_shift()
+        self.dx -= 10
+        self.changed = True
 
     def move_right(self):
         self.dx += 10
-        self.apply_shift()
+        self.changed = True
+
+    def zoom_image(self, zoom_factor):
+        self.changed = True
+        self.zoom_factor = zoom_factor
+
+    def apply_rotation(self, angle=None, re_apply_all=False):
+        self.changed = True
+        self.rotation = angle
 
     def read_image(self):
         try:
@@ -36,26 +45,30 @@ class ImageReader:
             self.original_data = cv2.imread(self.file_path)
             if self.original_data is None:
                 raise FileNotFoundError(f"Could not read image at {self.file_path}")
+
             self.modified_data = np.copy(
                 self.original_data
             )  # Copy original data for modifications
+
             return self.original_data
         except Exception as e:
             print(f"Error reading image: {e}")
 
-    def zoom_image(self, zoom_factor):
-        print(zoom_factor)
+    def _zoom_image(self):
+        zoom_factor = self.zoom_factor
+
         if zoom_factor <= 0:
             return
-        width, height = self.original_data.shape[1], self.original_data.shape[0]
 
-        new_width = int(self.original_data.shape[1] * zoom_factor)
-        new_height = int(self.original_data.shape[0] * zoom_factor)
+        width, height = self.modified_data.shape[1], self.modified_data.shape[0]
+
+        new_width = int(self.modified_data.shape[1] * zoom_factor)
+        new_height = int(self.modified_data.shape[0] * zoom_factor)
 
         if zoom_factor < 1:
             # If zooming out, create a blank image of original size
             zoomed_image = np.zeros(
-                (height, width, self.original_data.shape[2]), dtype=np.uint8
+                (height, width, self.modified_data.shape[2]), dtype=np.uint8
             )
             # Calculate the starting point for pasting the zoomed-out image
             start_x = (width - new_width) // 2
@@ -63,7 +76,7 @@ class ImageReader:
             # Paste the zoomed-out image onto the blank image
             zoomed_image[
                 start_y : start_y + new_height, start_x : start_x + new_width
-            ] = cv2.resize(self.original_data, (new_width, new_height))
+            ] = cv2.resize(self.modified_data, (new_width, new_height))
         else:
             # If zooming in, perform regular resizing and cropping
             dim = (width, height)
@@ -74,7 +87,7 @@ class ImageReader:
             crop_y = (new_height - crop_height) // 2
 
             # Resize the image to the new width and height
-            zoomed_image = cv2.resize(self.original_data, (new_width, new_height))
+            zoomed_image = cv2.resize(self.modified_data, (new_width, new_height))
 
             # Crop the image to its original size
             zoomed_image = zoomed_image[
@@ -86,9 +99,11 @@ class ImageReader:
             zoomed_image, (width, height), interpolation=cv2.INTER_LINEAR
         )
 
-    def apply_rotation(self, angle=None, re_apply_all=False):
+    def _apply_rotation(
+        self,
+    ):
         # Get the original image
-        self.angle = angle or self.rotation
+        angle = self.rotation
         height, width = self.modified_data.shape[:2]
 
         # Calculate the rotation center
@@ -117,7 +132,7 @@ class ImageReader:
         # Set the padded image to the image reader
         self.modified_data = padded_image
 
-    def apply_shift(self):
+    def _apply_shift(self):
 
         rows, cols, _ = self.original_data.shape
         translation_matrix = np.float32([[1, 0, self.dx], [0, 1, self.dy]])
@@ -139,9 +154,9 @@ class ImageReader:
         )
 
         self.modified_data = canvas
-        self.apply_rotation()
 
     def reset_to_original(self):
+        self.changed = False
         self.rotation = 0
         self.zoom_factor = 0
         self.dx = 0
@@ -152,11 +167,33 @@ class ImageReader:
         self.modified_data = np.copy(self.original_data)
 
     def change_transparency(self, alpha):
+        self.weight = alpha
+        self.changed = True
 
+    def _change_transparency(self):
+        alpha = self.weight
         # Create a transparent background image
-        background = np.zeros_like(self.original_data)
+        background = np.zeros_like(self.modified_data)
 
         # Blend the image and background with transparency
         self.modified_data = cv2.addWeighted(
-            self.original_data, alpha, background, 1 - alpha, 0
+            self.modified_data, alpha, background, 1 - alpha, 0
         )
+
+    def get_modified_data(self):
+
+        if not self.changed:
+            return self.modified_data
+
+        self.modified_data = np.copy(
+            self.original_data
+        )  # Copy original data for modifications
+
+        if self.changed:
+            self.changed = False
+            self._apply_shift()
+            self._apply_rotation()
+            self._zoom_image()
+            self._change_transparency()
+
+        return self.modified_data

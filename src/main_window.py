@@ -164,11 +164,13 @@ class MainWindow(QMainWindow):
         selected_item = None
         if item:
             selected_item = self.image_list_widget.currentItem().text()
-            combined_image = self.image_list_widget._data[selected_item].modified_data
+            combined_image = self.image_list_widget._data[
+                selected_item
+            ].get_modified_data()
         for fp, reader in self.image_list_widget._data.items():
             if fp == selected_item:
                 continue
-            image = reader.modified_data
+            image = reader.get_modified_data()
             if combined_image is None:
                 combined_image = image
             else:

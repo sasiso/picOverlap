@@ -59,19 +59,3 @@ class ImageDisplayWidget(QWidget):
 
             # Draw image
             painter.drawImage(image_rect, image)
-
-    def mousePressEvent(self, event):
-        if event.buttons() == Qt.LeftButton:
-            self.main_window.last_pos = event.pos()
-            self.main_window.dragging = True
-
-    def mouseMoveEvent(self, event):
-        if self.main_window.dragging:
-            delta = event.pos() - self.main_window.last_pos
-            self.main_window.last_pos = event.pos()
-            self.main_window.offset += delta
-            self.main_window.display_images()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.dragging = False
